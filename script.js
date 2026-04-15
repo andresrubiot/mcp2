@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskList = document.getElementById('taskList');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const counter = document.getElementById('taskCounter');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 
     let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     let currentFilter = 'all';
@@ -12,10 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('tasks', JSON.stringify(tasks));
     }
 
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) return 'Hoy';
+        if (days === 1) return 'Ayer';
+        if (days < 7) return `Hace ${days} días`;
+        
+        return date.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+    }
+
     function updateCounter() {
         const pending = tasks.filter(t => !t.completed).length;
         const total = tasks.length;
         counter.textContent = `${pending} pendiente${pending !== 1 ? 's' : ''} · ${total} total`;
+        if (clearCompletedBtn) {
+            clearCompletedBtn.style.display = tasks.some(t => t.completed) ? 'block' : 'none';
+        }
     }
 
     function renderTasks() {
@@ -42,7 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
             li.dataset.id = task.id;
             li.innerHTML = `
                 <div class="task-checkbox" data-id="${task.id}"></div>
-                <span class="task-text" data-id="${task.id}">${escapeHtml(task.text)}</span>
+                <div class="task-content">
+                    <span class="task-text" data-id="${task.id}">${escapeHtml(task.text)}</span>
+                    <span class="task-date">${task.createdAt ? formatDate(task.createdAt) : ''}</span>
+                </div>
                 <button class="delete-btn" data-id="${task.id}">×</button>
             `;
             taskList.appendChild(li);
@@ -84,9 +104,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteTask(id) {
-        tasks = tasks.filter(task => task.id !== id);
-        saveTasks();
-        renderTasks();
+        const li = taskList.querySelector(`[data-id="${id}"]`);
+        if (li) {
+            li.classList.add('removing');
+            setTimeout(() => {
+                tasks = tasks.filter(task => task.id !== id);
+                saveTasks();
+                renderTasks();
+            }, 300);
+        } else {
+            tasks = tasks.filter(task => task.id !== id);
+            saveTasks();
+            renderTasks();
+        }
+    }
+
+    function clearCompleted() {
+        const completedElements = taskList.querySelectorAll('.task-item.completed');
+        completedElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add('removing');
+            }, index * 100);
+        });
+        setTimeout(() => {
+            tasks = tasks.filter(task => !task.completed);
+            saveTasks();
+            renderTasks();
+        }, completedElements.length * 100 + 300);
     }
 
     function editTask(id, newText) {
@@ -157,6 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTasks();
         });
     });
+
+    if (clearCompletedBtn) {
+        clearCompletedBtn.addEventListener('click', clearCompleted);
+    }
 
     renderTasks();
 });
