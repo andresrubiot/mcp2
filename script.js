@@ -4,9 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskList = document.getElementById('taskList');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const counter = document.getElementById('taskCounter');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 
     let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     let currentFilter = 'all';
+    let draggedItem = null;
 
     function saveTasks() {
         localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -16,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const pending = tasks.filter(t => !t.completed).length;
         const total = tasks.length;
         counter.textContent = `${pending} pendiente${pending !== 1 ? 's' : ''} · ${total} total`;
+        if (clearCompletedBtn) {
+            clearCompletedBtn.style.display = tasks.some(t => t.completed) ? 'block' : 'none';
+        }
     }
 
     function renderTasks() {
@@ -36,19 +41,76 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        filteredTasks.forEach(task => {
+filteredTasks.forEach(task => {
             const li = document.createElement('li');
             li.className = `task-item ${task.completed ? 'completed' : ''}`;
             li.dataset.id = task.id;
+            li.draggable = true;
             li.innerHTML = `
                 <div class="task-checkbox" data-id="${task.id}"></div>
-                <span class="task-text" data-id="${task.id}">${escapeHtml(task.text)}</span>
+                <div class="task-content">
+                    <span class="task-text" data-id="${task.id}">${escapeHtml(task.text)}</span>
+                    <span class="task-date">${task.createdAt ? formatDate(task.createdAt) : ''}</span>
+                </div>
                 <button class="delete-btn" data-id="${task.id}">×</button>
             `;
             taskList.appendChild(li);
         });
 
         updateCounter();
+        setupDragAndDrop();
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) return 'Hoy';
+        if (days === 1) return 'Ayer';
+        if (days < 7) return `Hace ${days} días`;
+        
+        return date.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+    }
+
+    function setupDragAndDrop() {
+        const items = taskList.querySelectorAll('.task-item');
+        
+        items.forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                draggedItem = item;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedItem && draggedItem !== item) {
+                    const draggedId = draggedItem.dataset.id;
+                    const targetId = item.dataset.id;
+                    
+                    const draggedIndex = tasks.findIndex(t => t.id === draggedId);
+                    const targetIndex = tasks.findIndex(t => t.id === targetId);
+                    
+                    const [removed] = tasks.splice(draggedIndex, 1);
+                    tasks.splice(targetIndex, 0, removed);
+                    
+                    saveTasks();
+                    renderTasks();
+                }
+            });
+        });
     }
 
     function escapeHtml(text) {
@@ -84,9 +146,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteTask(id) {
-        tasks = tasks.filter(task => task.id !== id);
-        saveTasks();
-        renderTasks();
+        const li = taskList.querySelector(`[data-id="${id}"]`);
+        if (li) {
+            li.classList.add('removing');
+            setTimeout(() => {
+                tasks = tasks.filter(task => task.id !== id);
+                saveTasks();
+                renderTasks();
+            }, 300);
+        } else {
+            tasks = tasks.filter(task => task.id !== id);
+            saveTasks();
+            renderTasks();
+        }
+    }
+
+    function clearCompleted() {
+        const completedElements = taskList.querySelectorAll('.task-item.completed');
+        completedElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add('removing');
+            }, index * 100);
+        });
+        setTimeout(() => {
+            tasks = tasks.filter(task => !task.completed);
+            saveTasks();
+            renderTasks();
+        }, completedElements.length * 100 + 300);
     }
 
     function editTask(id, newText) {
@@ -157,6 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTasks();
         });
     });
+
+    if (clearCompletedBtn) {
+        clearCompletedBtn.addEventListener('click', clearCompleted);
+    }
 
     renderTasks();
 });
