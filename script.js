@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskList = document.getElementById('taskList');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const counter = document.getElementById('taskCounter');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 
     let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     let currentFilter = 'all';
@@ -16,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const pending = tasks.filter(t => !t.completed).length;
         const total = tasks.length;
         counter.textContent = `${pending} pendiente${pending !== 1 ? 's' : ''} · ${total} total`;
+        if (clearCompletedBtn) {
+            clearCompletedBtn.style.display = tasks.some(t => t.completed) ? 'block' : 'none';
+        }
     }
 
     function renderTasks() {
@@ -84,9 +88,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteTask(id) {
-        tasks = tasks.filter(task => task.id !== id);
-        saveTasks();
-        renderTasks();
+        const li = taskList.querySelector(`[data-id="${id}"]`);
+        if (li) {
+            li.classList.add('removing');
+            setTimeout(() => {
+                tasks = tasks.filter(task => task.id !== id);
+                saveTasks();
+                renderTasks();
+            }, 300);
+        } else {
+            tasks = tasks.filter(task => task.id !== id);
+            saveTasks();
+            renderTasks();
+        }
+    }
+
+    function clearCompleted() {
+        const completedElements = taskList.querySelectorAll('.task-item.completed');
+        completedElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add('removing');
+            }, index * 100);
+        });
+        setTimeout(() => {
+            tasks = tasks.filter(task => !task.completed);
+            saveTasks();
+            renderTasks();
+        }, completedElements.length * 100 + 300);
     }
 
     function editTask(id, newText) {
@@ -127,6 +155,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addBtn.addEventListener('click', addTask);
 
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            taskInput.focus();
+        }
+        
+        if (e.key === 'Escape') {
+            taskInput.blur();
+        }
+    });
+
     taskInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addTask();
     });
@@ -157,6 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTasks();
         });
     });
+
+    if (clearCompletedBtn) {
+        clearCompletedBtn.addEventListener('click', clearCompleted);
+    }
 
     renderTasks();
 });
