@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List Pulpoline</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>To-Do List</h1>
+            <p class="subtitle">Minimalista e interactiva</p>
+        </header>
+        
+        <div class="input-container">
+            <input type="text" id="taskInput" placeholder="Nueva tarea..." autocomplete="off">
+            <button id="addBtn">+</button>
+        </div>
+        
+        <ul id="taskList" class="task-list"></ul>
+        
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="pending">Pendientes</button>
+            <button class="filter-btn" data-filter="completed">Completadas</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
