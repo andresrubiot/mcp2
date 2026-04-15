@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskList = document.getElementById('taskList');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const counter = document.getElementById('taskCounter');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 
     let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     let currentFilter = 'all';
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pending = tasks.filter(t => !t.completed).length;
         const total = tasks.length;
         counter.textContent = `${pending} pendiente${pending !== 1 ? 's' : ''} · ${total} total`;
+        clearCompletedBtn.style.display = tasks.some(t => t.completed) ? 'block' : 'none';
     }
 
     function renderTasks() {
@@ -89,6 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTasks();
     }
 
+    function clearCompleted() {
+        tasks = tasks.filter(task => !task.completed);
+        saveTasks();
+        renderTasks();
+    }
+
     function editTask(id, newText) {
         tasks = tasks.map(task =>
             task.id === id ? { ...task, text: newText } : task
@@ -157,6 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTasks();
         });
     });
+
+    clearCompletedBtn.addEventListener('click', clearCompleted);
 
     renderTasks();
 });
